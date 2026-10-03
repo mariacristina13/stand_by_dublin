@@ -1,69 +1,88 @@
-import Image from "next/image";
-import styles from "./page.module.css";
+'use client';
+
+import { useEffect, useState } from 'react';
+import dynamic from 'next/dynamic';
+import SearchBar from '../components/SearchBar';
+import { useIncidentStream } from '../hooks/useIncidentStream';
+import { DUBLIN_CENTER } from '../lib/mapUtils';
+
+// Leaflet touches `window`, so the map must never render on the server.
+const MapView = dynamic(() => import('../components/Map/MapView'), { ssr: false });
 
 export default function Home() {
+  const [stands, setStands] = useState([]);
+  const [incidents, setIncidents] = useState([]);
+  const [searchResults, setSearchResults] = useState([]);
+  const [toast, setToast] = useState(null);
+  const [loadError, setLoadError] = useState(false);
+
+  const { liveIncidents, connected } = useIncidentStream();
+
+  // Merge live incidents from the SSE stream into the map as they arrive.
+  useEffect(() => {
+    if (liveIncidents.length === 0) return;
+    setIncidents((prev) => [...liveIncidents, ...prev].slice(0, 100));
+    const newest = liveIncidents[0];
+    setToast(newest.text);
+    const t = setTimeout(() => setToast(null), 4000);
+    return () => clearTimeout(t);
+  }, [liveIncidents]);
+
+  // Fetch nearby stands + recent incidents from MongoDB. No mock fallback —
+  // an unreachable DB or empty collection just means an empty map.
+  useEffect(() => {
+    const [lat, lng] = DUBLIN_CENTER;
+
+    fetch(`/api/stands/nearby?lat=${lat}&lng=${lng}&radius=500`)
+      .then((res) => {
+        if (!res.ok) throw new Error('bad response');
+        return res.json();
+      })
+      .then((data) => setStands(data.stands ?? []))
+      .catch(() => setLoadError(true));
+
+    fetch('/api/incidents')
+      .then((res) => {
+        if (!res.ok) throw new Error('bad response');
+        return res.json();
+      })
+      .then((data) => setIncidents(data.incidents ?? []))
+      .catch(() => setLoadError(true));
+  }, []);
+
+  const highlightedIds = searchResults.map((r) => r.id);
+  const incidentsToShow = searchResults.length > 0 ? searchResults : incidents;
+  const showEmptyState = !loadError && stands.length === 0 && incidents.length === 0;
+
   return (
-    <div className={styles.page}>
-      <main className={styles.main}>
-        <Image
-          className={styles.logo}
-          src="/next.svg"
-          alt="Next.js logo"
-          width={100}
-          height={20}
-          priority
-        />
-        <div className={styles.intro}>
-          <h1>
-            To get started, edit the{" "}
-            <code className={styles.code}>page.js</code> file.
-          </h1>
-          <p>
-            Looking for a starting point or more instructions? Head over to{" "}
-            <a
-              href="https://vercel.com/templates?framework=next.js&utm_source=create-next-app&utm_medium=appdir-template-tw&utm_campaign=create-next-app"
-              target="_blank"
-              rel="noopener noreferrer"
-            >
-              Templates
-            </a>{" "}
-            or the{" "}
-            <a
-              href="https://nextjs.org/learn?utm_source=create-next-app&utm_medium=appdir-template-tw&utm_campaign=create-next-app"
-              target="_blank"
-              rel="noopener noreferrer"
-            >
-              Learning
-            </a>{" "}
-            center.
-          </p>
-        </div>
-        <div className={styles.ctas}>
-          <a
-            className={styles.primary}
-            href="https://vercel.com/new?utm_source=create-next-app&utm_medium=appdir-template&utm_campaign=create-next-app"
-            target="_blank"
-            rel="noopener noreferrer"
-          >
-            <Image
-              className={styles.logo}
-              src="/vercel.svg"
-              alt="Vercel logomark"
-              width={16}
-              height={14}
-            />
-            Deploy Now
-          </a>
-          <a
-            className={styles.secondary}
-            href="https://nextjs.org/docs?utm_source=create-next-app&utm_medium=appdir-template&utm_campaign=create-next-app"
-            target="_blank"
-            rel="noopener noreferrer"
-          >
-            Documentation
-          </a>
-        </div>
-      </main>
-    </div>
+    <main className="page-main">
+      <header className="page-header">
+        <h1 className="page-title">🚲 Dublin Lock &amp; Ride</h1>
+        <SearchBar onResults={setSearchResults} />
+        <span className={`page-status ${connected ? 'status-live' : 'status-offline'}`}>
+          {connected ? '● live' : '● no live stream connected'}
+        </span>
+      </header>
+
+      <div className="map-area">
+        <MapView stands={stands} incidents={incidentsToShow} highlightedIncidentIds={highlightedIds} />
+
+        {loadError && (
+          <div className="empty-state">
+            Couldn&apos;t reach MongoDB. Check MONGODB_URI in .env.local and
+            that scripts/seed.js has been run.
+          </div>
+        )}
+
+        {showEmptyState && (
+          <div className="empty-state">
+            No stands or incidents in the database yet. Run{' '}
+            <code>node scripts/seed.js</code> to add starter data.
+          </div>
+        )}
+
+        {toast && <div className="toast">🚨 New report: {toast}</div>}
+      </div>
+    </main>
   );
 }
