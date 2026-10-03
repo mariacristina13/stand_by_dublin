@@ -5,7 +5,9 @@
   "scripts": {
     "dev": "next dev",
     "build": "next build",
-    "start": "next start"
+    "start": "next start",
+    "server": "npm --prefix server run dev",
+    "server:install": "npm --prefix server install"
   },
   "dependencies": {
     "next": "16.3.8",
