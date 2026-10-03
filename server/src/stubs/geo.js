@@ -1,21 +1,5 @@
-// STUB for Role 1 (geospatial). Swap for the real implementation; keep the signature and return shape.
-// Uses $geoNear rather than $nearSphere because $nearSphere can't return the distance.
-import { spots } from '../db.js';
+// Role 1 (geospatial): stands within radiusM of [lng, lat], nearest first, each with
+// `distance` in metres. Implemented in core.js, shared with the Next.js API routes.
+import { core } from '../risk.js';
 
-// Stands within radiusM of [lng, lat], nearest first, each with `distance` in metres
-export function findNearby(lng, lat, radiusM) {
-  return spots
-    .aggregate([
-      {
-        $geoNear: {
-          near: { type: 'Point', coordinates: [lng, lat] },
-          key: 'location',
-          distanceField: 'distance',
-          maxDistance: radiusM,
-          spherical: true,
-        },
-      },
-      { $limit: 100 },
-    ])
-    .toArray();
-}
+export const findNearby = core.findNearby;

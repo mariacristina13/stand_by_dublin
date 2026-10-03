@@ -1,0 +1,8 @@
+# Never upload secrets or local installs; Vercel installs dependencies itself
+.env*
+!.env.example
+server/.env
+node_modules
+server/node_modules
+.next
+.DS_Store

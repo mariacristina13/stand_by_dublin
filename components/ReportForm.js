@@ -64,14 +64,22 @@ export default function ReportForm({ location, onLocationChange, onSubmitted, on
       });
     } catch (err) {
       // The server's validation messages are user-readable (e.g. "location must be inside Dublin …")
-      setError(err.message || 'Couldn’t submit the report. Is the API server running?');
+      setError(err.message || 'Couldn’t submit the report. Try again in a moment.');
       setSubmitting(false);
     }
   }
 
   return (
     <form className="report-panel" onSubmit={handleSubmit}>
-      <h2 className="report-title">Report a theft</h2>
+      <div className="report-head">
+        <div>
+          <h2 className="report-title">Report a theft</h2>
+          <p className="report-sub">Updates stand risk for everyone, live.</p>
+        </div>
+        <button type="button" className="report-close" onClick={onCancel} aria-label="Close">
+          ×
+        </button>
+      </div>
 
       <div className="report-location">
         {location ? (
@@ -79,7 +87,7 @@ export default function ReportForm({ location, onLocationChange, onSubmitted, on
             📍 {location.lat.toFixed(5)}, {location.lng.toFixed(5)}
           </span>
         ) : (
-          <span className="report-hint">Click the map where it happened</span>
+          <span className="report-hint">Tap the map where it happened</span>
         )}
         <button type="button" className="report-link" onClick={locateMe} disabled={locating}>
           {locating ? 'Locating…' : 'Use my location'}

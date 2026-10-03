@@ -120,7 +120,7 @@ Bike stands near a point, nearest first, each with its risk.
 | param | default | notes |
 |---|---|---|
 | `lat`, `lng` | required | |
-| `radius` | 200 | metres, capped at 1000 |
+| `radius` | 200 | metres, capped at 8000. At most 1500 stands are returned |
 
 ```bash
 curl 'localhost:3001/api/parking/nearby?lat=53.3430&lng=-6.2620&radius=300'
@@ -161,7 +161,7 @@ Returns an array of report documents, the same shape as `/incidents/search` belo
 
 ## GET /incidents/search?q&limit
 
-Search report text.
+Natural-language search over report text.
 
 | param | default | notes |
 |---|---|---|
@@ -184,4 +184,4 @@ curl 'localhost:3001/api/incidents/search?q=lock&limit=5'
   }
 ]
 ```
-> This is currently a stub doing case-insensitive substring matching, newest first. Role 2 will swap in vector search, so results will be ranked by meaning rather than by date. The response shape stays the same, though a `score` field may be added.
+Results are ranked by meaning with Atlas Vector Search (`theft_reports_vector`, Automated Embedding with `voyage-4` on `report_text`), so "someone checking locks" finds "man testing locks one by one". Each result has a `score` from 0 to 1. New reports become searchable a few seconds after insert, once Atlas has embedded them. If vector search is unavailable, the endpoint falls back to a case-insensitive substring match, newest first, without `score`.

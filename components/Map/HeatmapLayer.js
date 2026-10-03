@@ -20,7 +20,7 @@ export default function HeatmapLayer({ points }) {
       radius: 28,
       blur: 22,
       maxZoom: 17,
-      gradient: { 0.2: '#2a9d8f', 0.5: '#f4a261', 0.8: '#e63946' },
+      gradient: { 0.2: '#d9962b', 0.55: '#bb4d00', 0.85: '#7a1f05' },
     });
 
     heat.addTo(map);

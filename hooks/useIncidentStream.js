@@ -17,7 +17,7 @@ export function useIncidentStream() {
       subscribe({
         onOpen: () => setConnected(true),
         onError: () => setConnected(false),
-        onIncident: (doc) => setLiveIncidents((prev) => [toIncident(doc), ...prev].slice(0, 100)),
+        onIncident: (doc) => setLiveIncidents((prev) => [toIncident(doc), ...prev].slice(0, 500)),
         onRiskUpdate: setRiskUpdate,
       }),
     []

@@ -1,65 +1,8 @@
+// Express-side bindings for the shared risk logic (core.js / scoring.js).
 import { reports, spots } from './db.js';
+import { makeCore } from './core.js';
 
-// Tunables
-export const R = 150;                          // metres: incidents within R count toward a point
-export const SEVERITY = { minor: 1, major: 3 };
-export const HALF_LIFE_H = 168;                // recency weight halves every week
-export const K = 3;                            // saturation: score = 100 * (1 - e^(-sum/K))
-export const MAX_STANDS = 20;                  // stands rescored per incident
-const EARTH_R = 6378100;                       // metres, same radius MongoDB uses for $centerSphere
+export { R, SEVERITY, HALF_LIFE_H, K, MAX_STANDS, haversine, scorePoints } from './scoring.js';
 
-const toRad = (d) => (d * Math.PI) / 180;
-
-// Great-circle distance in metres between two [lng, lat] points
-export function haversine([lng1, lat1], [lng2, lat2]) {
-  const dLat = toRad(lat2 - lat1);
-  const dLng = toRad(lng2 - lng1);
-  const a = Math.sin(dLat / 2) ** 2 + Math.cos(toRad(lat1)) * Math.cos(toRad(lat2)) * Math.sin(dLng / 2) ** 2;
-  return 2 * EARTH_R * Math.asin(Math.sqrt(a));
-}
-
-// Score a point from a list of incident docs ({ location, severity, created_at }).
-// Incidents beyond radiusM are ignored, so callers can pass a superset.
-export function scorePoints(centreLngLat, incidents, radiusM = R, now = Date.now()) {
-  let sum = 0;
-  let count = 0;
-  for (const inc of incidents) {
-    const d = haversine(centreLngLat, inc.location.coordinates);
-    if (d > radiusM) continue;
-    const ageH = Math.max(0, (now - new Date(inc.created_at).getTime()) / 3.6e6);
-    sum += (SEVERITY[inc.severity] ?? 1) * 0.5 ** (ageH / HALF_LIFE_H) * (1 - d / radiusM);
-    count++;
-  }
-  return { score: Math.round(100 * (1 - Math.exp(-sum / K))), incidents: count };
-}
-
-// All incidents within radiusM of a point, without embeddings
-export function incidentsNear(lng, lat, radiusM) {
-  return reports
-    .find(
-      { location: { $geoWithin: { $centerSphere: [[lng, lat], radiusM / EARTH_R] } } },
-      { projection: { location: 1, severity: 1, created_at: 1 } }
-    )
-    .toArray();
-}
-
-export async function riskAt(lng, lat) {
-  return scorePoints([lng, lat], await incidentsNear(lng, lat, R));
-}
-
-// After a new incident: rescore every stand within R of it.
-// One query for stands, one for incidents (any incident affecting those stands is within 2R of the new one).
-export async function onIncident(doc) {
-  const [lng, lat] = doc.location.coordinates;
-  const stands = await spots
-    .find(
-      { location: { $nearSphere: { $geometry: { type: 'Point', coordinates: [lng, lat] }, $maxDistance: R } } },
-      { projection: { location: 1 } }
-    )
-    .limit(MAX_STANDS)
-    .toArray();
-  if (!stands.length) return [];
-
-  const incidents = await incidentsNear(lng, lat, 2 * R);
-  return stands.map((s) => ({ spot_id: s._id, ...scorePoints(s.location.coordinates, incidents) }));
-}
+export const core = makeCore({ reports, spots });
+export const { incidentsNear, riskAt, onIncident } = core;

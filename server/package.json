@@ -3,7 +3,9 @@
   "version": "0.1.0",
   "private": true,
   "type": "module",
-  "engines": { "node": ">=18" },
+  "engines": {
+    "node": ">=18"
+  },
   "scripts": {
     "start": "node src/index.js",
     "dev": "node --watch src/index.js",
@@ -11,7 +13,9 @@
     "seed": "node scripts/seed-spots.js",
     "dummy": "node scripts/insert-dummy.js",
     "reset": "node scripts/reset.js",
-    "demo": "node scripts/demo.js"
+    "demo": "node scripts/demo.js",
+    "seed:dummy": "node scripts/seed-dummy.js",
+    "seed:dummy:clear": "node scripts/seed-dummy.js --clear"
   },
   "dependencies": {
     "cors": "^2.8.5",
