@@ -1,11 +1,11 @@
 'use client';
 
 import { useState, useRef } from 'react';
+import { searchIncidents } from '../lib/api';
 
 /**
- * Debounced natural-language search against /api/incidents/search (MongoDB
- * regex match, or $vectorSearch once MONGODB_VECTOR_INDEX is set). No local
- * fallback data — a failed or empty query just shows no results.
+ * Debounced search against the API's /incidents/search (substring match for now,
+ * vector search once Role 2 lands). A failed or empty query just shows no results.
  */
 export default function SearchBar({ onResults }) {
   const [query, setQuery] = useState('');
@@ -23,16 +23,9 @@ export default function SearchBar({ onResults }) {
     setError(null);
 
     try {
-      const res = await fetch('/api/incidents/search', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ query: q }),
-      });
-      if (!res.ok) throw new Error('search failed');
-      const data = await res.json();
-      onResults(data.results ?? []);
+      onResults(await searchIncidents(q.trim(), 20));
     } catch {
-      setError('Search unavailable — check MongoDB connection.');
+      setError('Search unavailable — is the API server running?.');
       onResults([]);
     } finally {
       setLoading(false);

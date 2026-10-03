@@ -144,6 +144,21 @@ Stand fields come straight from `parking_spots` (Role 1's data). `capacity` is a
 
 ---
 
+## GET /incidents?limit
+
+Most recent reports, newest first.
+
+| param | default | notes |
+|---|---|---|
+| `limit` | 100 | capped at 500 |
+
+```bash
+curl 'localhost:3001/api/incidents?limit=20'
+```
+Returns an array of report documents, the same shape as `/incidents/search` below.
+
+---
+
 ## GET /incidents/search?q&limit
 
 Search report text.
