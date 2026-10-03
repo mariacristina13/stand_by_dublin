@@ -1,6 +1,7 @@
 
 
 LIVE APP: https://lock-and-ride.vercel.app
+
 VIDEO: https://www.loom.com/share/cd6383e6d02a4e52a8d4df2c39db5847
 
 **Dublin Lock & Ride** helps cyclists decide where to lock up right now. Bike theft is a constant worry in Dublin, but the information is scattered across group chats and static open-data lists.
